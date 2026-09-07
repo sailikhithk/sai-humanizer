@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sai-humanizer"
-version = "0.1.0"
-description = "De-AI text humanizer with 55+ pattern taxonomy. Two-pass pipeline: deterministic pattern removal + statistical burstiness enforcement."
+version = "0.2.0"
+description = "Three-layer de-AI text humanizer: stylistic pattern removal, Unicode watermark stripping, and statistical AI detection."
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
@@ -21,6 +21,12 @@ keywords = [
     "ai-writing",
     "text-rewriting",
     "burstiness",
+    "watermark-removal",
+    "unicode-watermarks",
+    "perplexity",
+    "binoculars",
+    "ai-patterns",
+    "chatgpt-detector",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -33,6 +39,10 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Text Processing :: General",
 ]
+
+[project.optional-dependencies]
+model = ["torch>=2.0", "transformers>=4.30"]
+dev = ["pytest>=7.0"]
 
 [project.scripts]
 sai-humanizer = "sai_humanizer.cli:main"

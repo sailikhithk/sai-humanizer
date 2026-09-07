@@ -1,27 +1,38 @@
 # sai-humanizer
 
-De-AI text humanizer with 55+ pattern taxonomy. Two-pass pipeline that strips AI writing patterns and enforces human-like rhythm.
+Three-layer de-AI text humanizer. Detects and removes AI writing patterns, invisible Unicode watermarks, and statistical AI signals.
 
 ## Why
 
-LLMs produce statistically likely text. That sameness is detectable. This tool removes the patterns that make text sound AI-generated, then checks the rhythm to make sure it reads like a human wrote it.
+LLMs leave three kinds of traces in text:
 
-Built from production use at Airbnb (humanizing AI-generated content for LinkedIn, Substack, resumes) and synthesized from three open-source sources:
+1. **Stylistic patterns** - AI vocabulary (delve, seamless, tapestry), em-dashes, sycophantic openers, filler phrases, low burstiness
+2. **Invisible Unicode watermarks** - Zero-width characters, exotic spaces, bidi controls, tag characters, homoglyphs embedded by Claude, Gemini/SynthID, OpenAI
+3. **Statistical signals** - Low perplexity, low burstiness, high green-list token ratio, uniform word lengths
 
+sai-humanizer detects all three and fixes layers 1 and 2 deterministically. Layer 3 provides detection and guidance.
+
+Built from production use at Airbnb and synthesized from:
 - `blader/humanizer` (Wikipedia "Signs of AI writing", MIT)
-- `HUMANIZED_CONTENT_GUARDRAILS.md` (55+ AI-tell taxonomy, two-pass pipeline design)
-- `jpeggdev/humanize-writing` (statistical burstiness approach)
+- `guillaumemeyer/watermarks-remover` (940 stars, multi-vendor Unicode stripping)
+- `cyzanfar/text-watermark-remover` (dewatermark, detector-scoped mitigation)
+- `PyModel/watermark-remover` (4-channel provenance removal)
+- `virajshoor/ADAFAI` (multi-signal detection: stylometry, Binoculars, green-list)
+- `umairinayat/AI-Detection` (GPTZero-style perplexity + burstiness)
+- `HUMANIZED_CONTENT_GUARDRAILS.md` (57+ AI-tell taxonomy)
 
 ## What makes this different
 
-| Existing tool | Gap | sai-humanizer |
-|---------------|-----|---------------|
-| `blader/humanizer` | Markdown skill only, no CLI, no API | Python CLI + library |
-| `Matt-Payne/content-humanizer` | Skill-only, no programmatic use | Importable, scriptable |
-| `ChrisThoma/de-ai-text` | Claude Code only, no Python | Python 3.10+, pip installable |
-| `lynote-ai/humanize-text` | Translation chain, heavy infra | Regex + statistics, zero deps |
+| Existing tool | Layer 1 | Layer 2 | Layer 3 | CLI | Library |
+|---------------|:-------:|:-------:|:-------:|:---:|:-------:|
+| `blader/humanizer` | 29 patterns | - | - | - | - |
+| `guillaumemeyer/watermarks-remover` | - | Unicode + files | - | agent | - |
+| `cyzanfar/dewatermark` | - | Unicode | detector-guided | yes | yes |
+| `PyModel/watermark-remover` | - | Unicode + images | - | yes | yes |
+| `virajshoor/ADAFAI` | stylometry | Unicode | Binoculars | - | - |
+| **sai-humanizer** | **57 patterns** | **Unicode** | **perplexity + Binoculars + burstiness** | **yes** | **yes** |
 
-**Your unfair advantage:** The most comprehensive pattern list (55+ entries) combined with a statistical burstiness scorer that measures whether your text reads like AI (uniform sentence lengths) or human (varied rhythm).
+sai-humanizer is the only tool that combines all three layers in a single pip-installable package with zero required dependencies.
 
 ## Install
 
@@ -29,7 +40,14 @@ Built from production use at Airbnb (humanizing AI-generated content for LinkedI
 pip install sai-humanizer
 ```
 
-Or from source:
+For model-based statistical detection (optional):
+
+```bash
+pip install sai-humanizer[model]
+# or manually: pip install torch transformers
+```
+
+From source:
 
 ```bash
 git clone https://github.com/sailikhithk/sai-humanizer.git
@@ -42,32 +60,45 @@ pip install -e .
 ### CLI
 
 ```bash
-# Humanize a file
+# Humanize a file (all 3 layers)
 sai-humanizer draft.md
 
 # Humanize inline text
-sai-humanizer -t "Let's delve into the seamless integration of our groundbreaking platform."
+sai-humanizer -t "Let's delve into the seamless integration."
 
 # Pipe from stdin
 cat draft.md | sai-humanizer
 
-# Show detailed change report
+# Show detailed 3-layer report
 sai-humanizer -r draft.md
 
-# Check only (exit 1 if AI patterns found, no rewrite)
+# Check only (exit 1 if any AI patterns found)
 sai-humanizer --check draft.md
 
-# Use marketing mode (more aggressive)
+# Detect only (print findings, no rewrite)
+sai-humanizer --detect draft.md
+
+# Run specific layer(s) only
+sai-humanizer -L stylistic -t "Let's delve into the tapestry."
+sai-humanizer -L unicode -L statistical draft.md
+
+# Inspect Unicode watermarks only
+sai-humanizer --inspect-unicode draft.md
+
+# Inspect statistical signals only
+sai-humanizer --inspect-stat draft.md
+
+# Use GPT-2 model for perplexity/Binoculars (requires torch)
+sai-humanizer --use-model --inspect-stat draft.md
+
+# Marketing mode (aggressive)
 sai-humanizer -m marketing -t "Our product revolutionizes the industry."
 
-# Use resume mode (preserve action verbs, strip filler)
+# Resume mode (preserve action verbs, strip filler)
 sai-humanizer -m resume resume.tex
 
-# Print the full 55+ AI-tell taxonomy
+# Print the full 57+ AI-tell taxonomy
 sai-humanizer --taxonomy
-
-# Write to file
-sai-humanizer draft.md -o draft-humanized.md
 ```
 
 ### Python API
@@ -75,64 +106,107 @@ sai-humanizer draft.md -o draft-humanized.md
 ```python
 from sai_humanizer import Humanizer
 
+# Full 3-layer pipeline
 h = Humanizer(mode="technical")
 report = h.humanize("Let's delve into the seamless integration.")
 
 print(report.humanized)
-# "Let's explore, examine, inspect, look at the clean, direct, smooth, integrated integration."
+print(report.total_detected)   # e.g. 5
+print(report.ai_probability)   # e.g. 0.72
+print(report.summary())        # one-line summary
+print(report.detailed_report())  # full 3-layer breakdown
 
-print(report.total_changes)
-# 2
+# Detection only (no modification)
+report = h.detect("Some text to check.")
+print(report.is_clean)         # True/False
 
-print(report.pass1_changes)
-# ['Replaced 1x AI word 'delve' -> 'explore, examine, inspect, look at'',
-#  'Replaced 1x AI word 'seamless' -> 'clean, direct, smooth, integrated'']
-
-print(f"Burstiness: {report.burstiness_before} -> {report.burstiness_after}")
+# Run specific layers only
+h = Humanizer(layers=["unicode"])
+report = h.humanize("Hello\u200bWorld")
+# Unicode watermarks stripped, stylistic patterns untouched
 ```
 
-### Burstiness scoring only
+### Layer 2: Unicode watermark scanning
 
 ```python
-from sai_humanizer import BurstinessScorer
+from sai_humanizer import UnicodeWatermarkScanner
 
-scorer = BurstinessScorer()
-result = scorer.score("The system works. The code runs. The tests pass. The build is clean.")
+scanner = UnicodeWatermarkScanner()
+result = scanner.scan("Hello\u200bWorld\u202eTest")
+print(result.total_found)       # 2
+print(result.categories_found)  # {"zero-width", "bidi"}
 
-print(result.burstiness)     # 0.12 (AI-like, below 0.35)
-print(result.is_ai_like)     # True
-print(result.suggestion)     # "Burstiness 0.12 is below 0.35..."
+cleaned = scanner.clean("Hello\u200bWorld")
+print(cleaned.cleaned)          # "HelloWorld"
 ```
 
-## The two-pass pipeline
+### Layer 3: Statistical detection
+
+```python
+from sai_humanizer import StatisticalDetector
+
+# Heuristic mode (no torch needed)
+detector = StatisticalDetector(use_model=False)
+result = detector.scan("The system works. The code runs. The tests pass.")
+print(result.ai_probability)    # e.g. 0.65
+print(result.method)            # "heuristic"
+
+# Model mode (requires torch + transformers)
+detector = StatisticalDetector(use_model=True)
+result = detector.scan("Some text to analyze.")
+print(result.perplexity)        # e.g. 15.2
+print(result.binoculars)        # e.g. 0.82
+```
+
+## The three-layer pipeline
 
 ```
 [Input text]
      |
      v
 +-------------------------------------------+
-| Pass 1: Deterministic (regex-based)       |
+| Layer 1: Stylistic (deterministic regex)  |
 | - Replace em-dashes and en-dashes         |
-| - Replace curly quotes with straight      |
+| - Replace curly quotes                    |
 | - Remove sycophantic openers              |
-| - Replace 55+ banned AI vocabulary words  |
+| - Replace 57+ banned AI vocabulary words  |
 | - Replace 40+ banned AI phrases           |
 | - Fix copula avoidance (serves as -> is)  |
-| - Remove filler phrases (in order to)     |
+| - Remove filler phrases                   |
+| - Detect triadic parallelism              |
+| - Score and enforce burstiness            |
+| - Detect bold-lead monotony               |
+| - Detect title case headings              |
 +-------------------------------------------+
      |
      v
 +-------------------------------------------+
-| Pass 2: Statistical (structural)          |
-| - Score burstiness (sentence length CV)   |
-| - Flag triadic parallelism (rule of 3)    |
-| - Detect bold-lead monotony in lists      |
-| - Detect title case in headings           |
-| - Suggest sentence splits for variance    |
+| Layer 2: Unicode Watermarks (deterministic)|
+| - Zero-width chars (ZWSP, ZWNJ, ZWJ)      |
+| - Exotic spaces (thin, hair, narrow NBSP) |
+| - Bidi controls (LRE, RLE, PDF, LRO, RLO) |
+| - Tag characters (U+E0000-E007F)          |
+| - Homoglyphs (Cyrillic, Greek lookalikes) |
+| - Variation selectors (VS1-VS16)          |
+| - Interlinear annotation chars            |
+| - Vendor hints: Claude, Gemini, OpenAI    |
 +-------------------------------------------+
      |
      v
-[Humanized output + change report]
++-------------------------------------------+
+| Layer 3: Statistical (heuristic or model) |
+| - Perplexity (GPT-2, requires torch)      |
+| - Binoculars score (cross-perplexity)     |
+| - Burstiness (sentence length CV)         |
+| - Green-list ratio (Kirchenbauer)         |
+| - Repetition ratio                        |
+| - Type-token ratio (vocabulary diversity) |
+| - Word length coefficient of variation    |
+| - Ensemble AI probability (0.0-1.0)       |
++-------------------------------------------+
+     |
+     v
+[Humanized output + 3-layer report]
 ```
 
 ## Modes
@@ -143,7 +217,7 @@ print(result.suggestion)     # "Burstiness 0.12 is below 0.35..."
 | `marketing` | Aggressive. Strips all AI patterns, punchier output. | Landing pages, ads, social |
 | `resume` | Preserves action verbs and metrics. Strips filler. | Resumes, cover letters |
 
-## The 55+ AI-tell taxonomy
+## The 57+ AI-tell taxonomy (Layer 1)
 
 Run `sai-humanizer --taxonomy` to see all patterns. Categories:
 
@@ -156,15 +230,37 @@ Run `sai-humanizer --taxonomy` to see all patterns. Categories:
 | Structure | 6 | Triadic parallelism, copula avoidance, false ranges, title case |
 | Filler | 3 | "in order to", "at this point in time", "has the ability to" |
 
+## Unicode watermark coverage (Layer 2)
+
+| Category | Characters | Vendors |
+|----------|-----------|---------|
+| Zero-width | ZWSP, ZWNJ, ZWJ, WJ, invisible operators, BOM | Claude, various |
+| Exotic spaces | NBSP, thin, hair, narrow NBSP, en/em quad | Gemini, various |
+| Bidi controls | LRE, RLE, PDF, LRO, RLO, LRI, RLI, FSI, PDI | Various |
+| Tag chars | U+E0000-E007F | AI provenance systems |
+| Homoglyphs | Cyrillic a/e/o/p/c/x/y, Greek o/p/a/e | Spoofing |
+| Variation selectors | VS1-VS16 | Various |
+| Interlinear | Anchor, separator, terminator | Rare |
+
+## Statistical signals (Layer 3)
+
+| Signal | What it measures | Method | Needs torch |
+|--------|-----------------|--------|:-----------:|
+| Perplexity | Text predictability (low = AI-like) | GPT-2 | yes |
+| Binoculars | Cross-perplexity ratio | Observer/performer models | yes |
+| Burstiness | Sentence length variance (low = AI-like) | Coefficient of variation | no |
+| Green-list | Kirchenbauer watermark token ratio | Heuristic token analysis | no |
+| Repetition | Vocabulary repetition ratio | Unique/total word ratio | no |
+| TTR | Type-token ratio (low = AI-like) | Unique words / total words | no |
+| Word length CV | Word length uniformity (low = AI-like) | Coefficient of variation | no |
+
 ## Check mode for CI
 
-Use `--check` in CI pipelines to block AI-generated content from being merged:
-
 ```bash
-# In a pre-commit hook or CI step
+# Block AI-generated content from being merged
 sai-humanizer --check docs/**/*.md
 # Exit 0: clean
-# Exit 1: AI patterns found (prints violations to stderr)
+# Exit 1: AI patterns found (prints all findings to stderr)
 ```
 
 ## Testing

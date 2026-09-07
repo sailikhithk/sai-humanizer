@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sai-humanizer"
+version = "0.1.0"
+description = "De-AI text humanizer with 55+ pattern taxonomy. Two-pass pipeline: deterministic pattern removal + statistical burstiness enforcement."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Sai Likhith Kanuparthi", email = "sailikhithcse@gmail.com"}
+]
+keywords = [
+    "ai-detection",
+    "content-humanizer",
+    "de-ai",
+    "anti-slop",
+    "writing-tools",
+    "ai-writing",
+    "text-rewriting",
+    "burstiness",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Content Creators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: General",
+]
+
+[project.scripts]
+sai-humanizer = "sai_humanizer.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/sailikhithk/sai-humanizer"
+Repository = "https://github.com/sailikhithk/sai-humanizer"
+
+[tool.setuptools.packages.find]
+include = ["sai_humanizer*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

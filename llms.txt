@@ -1,0 +1,40 @@
+# sai-humanizer
+
+> sai-humanizer: De-AI text humanizer with 55+ pattern taxonomy.
+> Two-pass pipeline: deterministic pattern removal + statistical burstiness enforcement.
+> Built by Sai Likhith Kanuparthi, part of the reliability layer for production AI in regulated industries.
+
+## What it does
+
+sai-humanizer detects and removes AI writing patterns from text. It uses a two-pass pipeline:
+
+1. Deterministic pass: regex-based removal of em-dashes, 55+ AI vocabulary words, 40+ AI phrases, sycophantic openers, filler, and copula avoidance.
+2. Statistical pass: burstiness scoring (sentence length coefficient of variation), triadic parallelism detection, bold-lead monotony flagging, and title case heading detection.
+
+## Key features
+
+- 55+ AI-tell taxonomy (the most comprehensive open-source pattern list)
+- Three modes: technical, marketing, resume
+- CLI with check mode for CI pipelines
+- Python library with importable Humanizer class
+- Zero runtime dependencies (stdlib only)
+- Burstiness scorer that quantifies how AI-like text rhythm is
+
+## Author
+
+Sai Likhith Kanuparthi
+- GitHub: https://github.com/sailikhithk
+- Portfolio: https://sailikhith.me
+- LinkedIn: https://linkedin.com/in/sailikhithk
+
+## Related projects
+
+- FacadeDriver: Multi-model LLM orchestration with retry, fallback, and circuit breakers
+- Synthetic-AI-Image-Detector (SAI): 6-signal AI image detection with calibration and uncertainty
+- eval-infra-for-agents: Field guide to production LLM agent evaluation infrastructure
+- llm-production-engineering: LLM serving operations playbook
+- lims-omi: 21 CFR Part 11 compliance collaboration platform for lab management
+
+## Keywords
+
+ai-detection, content-humanizer, de-ai, anti-slop, writing-tools, ai-writing, text-rewriting, burstiness, ai-patterns, chatgpt-detector

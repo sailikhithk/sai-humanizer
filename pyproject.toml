@@ -7,7 +7,7 @@ name = "sai-humanizer"
 version = "0.2.0"
 description = "Three-layer de-AI text humanizer: stylistic pattern removal, Unicode watermark stripping, and statistical AI detection."
 readme = "README.md"
-license = {text = "MIT"}
+
 requires-python = ">=3.10"
 authors = [
     {name = "Sai Likhith Kanuparthi", email = "sailikhithcse@gmail.com"}
@@ -31,14 +31,13 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "Intended Audience :: Content Creators",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Text Processing :: General",
 ]
+license = "MIT"
 
 [project.optional-dependencies]
 model = ["torch>=2.0", "transformers>=4.30"]
